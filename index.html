@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Ôn từ vựng - Import TXT</title>
+    <title>Ôn Từ Vựng</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: linear-gradient(145deg, #f0f7ff 0%, #e9eef5 100%); font-family: 'Segoe UI', system-ui, sans-serif; padding: 1.5rem; color: #1a2c3e; }
@@ -83,7 +83,7 @@
 <div class="app-container">
     <div class="header">
         <h1>🧠 Ôn từ vựng thông minh</h1>
-        <div class="sub">Import file TXT · Flashcard 2 chiều · 3 ngăn · Kiểm tra random</div>
+        <div class="sub">Import data · Flashcard 2 chiều · 3 ngăn · Kiểm tra random</div>
     </div>
 
     <div class="import-area">
@@ -158,7 +158,6 @@
             </div>
         </div>
     </div>
-    <footer>📌 Định dạng file TXT: mỗi dòng là "tiếng Trung | tiếng Việt" (dùng dấu | để phân cách)</footer>
 </div>
 
 <script>
@@ -228,29 +227,6 @@
         }
         return result;
     }
-
-    document.querySelector(".file-label").addEventListener("click", () => {
-        document.getElementById("txtFileInput").click();
-    });
-
-    document.getElementById("txtFileInput").addEventListener("change", (e) => {
-        const file = e.target.files[0];
-        if(!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            const rawData = evt.target.result;
-            const parsed = parseTXT(rawData);
-            if(parsed.length === 0) {
-                document.getElementById("status").innerHTML = "❌ Không tìm thấy dữ liệu. Định dạng đúng: tiếng Trung | tiếng Việt";
-                return;
-            }
-            currentVocab = parsed.map((item, idx) => ({ id: idx, term: item.term, meaning: item.meaning, box: getBox(item.term) }));
-            document.getElementById("status").innerHTML = `✅ Đã import ${currentVocab.length} từ vựng!`;
-            document.getElementById("mainContent").style.display = "block";
-            applyFilter();
-        };
-        reader.readAsText(file, "UTF-8");
-    });
 
     function applyFilter() {
         let arr = [...currentVocab];
