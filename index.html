@@ -77,6 +77,16 @@
         
         .hidden { display: none; }
         footer { margin-top: 30px; text-align: center; font-size: 0.7rem; color: #6f8eaa; }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal.hidden { display: none; }
+        .modal-content { background: white; border-radius: 20px; padding: 24px; max-width: 400px; width: 90%; max-height: 70vh; overflow-y: auto; }
+        .modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; text-align: center; color: #1e5a7d; }
+        .sheet-list { display: flex; flex-direction: column; gap: 8px; }
+        .sheet-item { background: #f8fafd; border: 1px solid #cbdde9; border-radius: 12px; padding: 12px 16px; cursor: pointer; text-align: center; font-weight: 500; }
+        .sheet-item:hover { background: #e2e8f0; }
+        .modal-cancel { margin-top: 16px; text-align: center; }
+        .modal-cancel-btn { background: #e2e8f0; border: none; padding: 8px 24px; border-radius: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -91,16 +101,22 @@
         <div class="status" id="status">Chưa có dữ liệu</div>
     </div>
 
+    <div id="sheetModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-title">Chọn sheet để load dữ liệu</div>
+            <div class="sheet-list" id="sheetList"></div>
+            <div class="modal-cancel">
+                <button class="modal-cancel-btn" id="cancelSheetBtn">Hủy</button>
+            </div>
+        </div>
+    </div>
+
     <div id="mainContent" style="display:none;">
         <div class="stats-bar">
             <div class="info-badge">📊 <span id="totalCount">0</span> từ</div>
             <div class="filter-group">
                 <input type="text" id="searchInput" class="search-box" placeholder="🔍 Tìm từ">
-                <button id="refreshViewBtn" class="btn">🔄 Làm mới</button>
-                <button id="exportDataBtn" class="btn">💾 Export tiến độ</button>
-                <button id="importDataBtn" class="btn">📂 Import tiến độ</button>
-                <input type="file" id="importProgressFile" accept=".json" style="display:none">
-            </div>
+                            </div>
         </div>
 
         <div class="boxes-row">
@@ -167,14 +183,48 @@
     let currentFilterBox = "all";
     let vocabBoxes = {};
 
-    // New function
-    const API_URL = "https://script.google.com/macros/s/AKfycbw1Zis05vd7UzZQ6MCmWWaBHzOfMk8Y3769Isu5DezD0LT9FuqIcfKsI6aDFxynkW7A/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbyx1zuC_Gfq0-0zeqykHIjdWG9YsBbIjoQ96pTwdioHKoc-yAdTsScoJRg0BYnZXoEgNQ/exec";
 
     async function loadFromSheet() {
         try {
+            document.getElementById("status").innerHTML = "⏳ Đang lấy danh sách sheet...";
+            document.getElementById("sheetModal").classList.remove("hidden");
+
+            const res = await fetch(`${API_URL}?action=sheets`);
+            const sheets = await res.json();
+
+            if (!sheets || sheets.length === 0) {
+                document.getElementById("sheetModal").classList.add("hidden");
+                document.getElementById("status").innerHTML = "❌ Không lấy được danh sách sheet";
+                return;
+            }
+
+            const sheetList = document.getElementById("sheetList");
+            sheetList.innerHTML = "";
+            sheets.forEach(name => {
+                const div = document.createElement("div");
+                div.className = "sheet-item";
+                div.textContent = name;
+                div.addEventListener("click", () => loadSheetData(name));
+                sheetList.appendChild(div);
+            });
+
+            document.getElementById("status").innerHTML = "Chọn sheet bên dưới";
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById("sheetModal").classList.add("hidden");
+            document.getElementById("status").innerHTML = "❌ Lỗi lấy danh sách sheet";
+        }
+    }
+
+    async function loadSheetData(sheetName) {
+        try {
+            document.getElementById("sheetModal").classList.add("hidden");
             document.getElementById("status").innerHTML = "⏳ Đang tải dữ liệu...";
 
-            const res = await fetch(API_URL);
+            const url = `${API_URL}?sheet=${encodeURIComponent(sheetName)}`;
+            const res = await fetch(url);
             const data = await res.json();
 
             if (!data || data.length === 0) {
@@ -189,7 +239,7 @@
                 box: getBox(item.term)
             }));
 
-            document.getElementById("status").innerHTML = `✅ Đã load ${currentVocab.length} từ!`;
+            document.getElementById("status").innerHTML = `✅ Đã load ${currentVocab.length} từ từ sheet "${sheetName}"!`;
             document.getElementById("mainContent").style.display = "block";
 
             applyFilter();
@@ -199,6 +249,11 @@
             document.getElementById("status").innerHTML = "❌ Lỗi load dữ liệu";
         }
     }
+
+    document.getElementById("cancelSheetBtn").addEventListener("click", () => {
+        document.getElementById("sheetModal").classList.add("hidden");
+        document.getElementById("status").innerHTML = "Chưa có dữ liệu";
+    });
 
     document.getElementById("loadSheetBtn").addEventListener("click", loadFromSheet);
 
@@ -340,23 +395,17 @@
         renderQuiz();
     }
 
-    function exportData() { const data = JSON.stringify(vocabBoxes); const blob = new Blob([data], {type:"application/json"}); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "vocab_progress.json"; a.click(); URL.revokeObjectURL(a.href); }
-    function importData(file) { const reader = new FileReader(); reader.onload = e => { try { const imported = JSON.parse(e.target.result); Object.assign(vocabBoxes, imported); saveBoxes(); applyFilter(); alert("Import thành công!"); } catch(err) { alert("File không hợp lệ"); } }; reader.readAsText(file); }
 
     function escapeHtml(str) { if(!str) return ""; return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
 
     document.querySelectorAll(".tab-btn").forEach(btn => { btn.addEventListener("click", () => { document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); document.getElementById("flashcardTab").classList.toggle("hidden", btn.dataset.tab!=="flashcard"); document.getElementById("quizTab").classList.toggle("hidden", btn.dataset.tab!=="quiz"); }); });
     document.querySelectorAll(".stat-box").forEach(box => { box.addEventListener("click", () => { currentFilterBox = box.dataset.filter || "all"; applyFilter(); }); });
     document.getElementById("searchInput").addEventListener("input", () => applyFilter());
-    document.getElementById("refreshViewBtn").addEventListener("click", () => applyFilter());
-    document.getElementById("prevBtn").addEventListener("click", () => { if(filteredVocab.length){ currentCardIndex = (currentCardIndex-1+filteredVocab.length)%filteredVocab.length; updateFlashcard(); } });
+        document.getElementById("prevBtn").addEventListener("click", () => { if(filteredVocab.length){ currentCardIndex = (currentCardIndex-1+filteredVocab.length)%filteredVocab.length; updateFlashcard(); } });
     document.getElementById("nextBtn").addEventListener("click", () => { if(filteredVocab.length){ currentCardIndex = (currentCardIndex+1)%filteredVocab.length; updateFlashcard(); } });
     document.getElementById("flipCard").addEventListener("click", () => { if(filteredVocab.length) document.getElementById("flipCard").classList.toggle("flipped"); });
     document.querySelectorAll(".rating-btn").forEach(btn => { btn.addEventListener("click", () => rateCurrent(btn.dataset.rating)); });
     document.getElementById("startQuizBtn").addEventListener("click", startQuiz);
-    document.getElementById("exportDataBtn").addEventListener("click", exportData);
-    document.getElementById("importDataBtn").addEventListener("click", () => document.getElementById("importProgressFile").click());
-    document.getElementById("importProgressFile").addEventListener("change", (e) => { if(e.target.files[0]) importData(e.target.files[0]); });
 
     loadBoxes();
 </script>
