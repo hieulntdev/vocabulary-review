@@ -579,8 +579,8 @@ body {
 
 .quiz-input {
   width: 100%;
-  padding: var(--spacing-14) var(--spacing-20);
-  border: none;
+  padding: var(--spacing-12) var(--spacing-20);
+  border: 2px solid transparent;
   border-radius: var(--radius-pill);
   margin-top: var(--spacing-12);
   font-family: var(--font-text);
@@ -639,7 +639,7 @@ body {
 .vocab-list {
   background: var(--surface-card);
   border-radius: var(--radius-cards);
-  padding: var(--spacing-24);
+  padding: var(--spacing-28);
   transition: background var(--transition-base);
 }
 
@@ -658,6 +658,26 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-12);
+  padding-right: var(--spacing-8);
+}
+
+/* Custom scrollbar */
+.cards-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cards-grid::-webkit-scrollbar-track {
+  background: var(--color-silver-mist);
+  border-radius: 3px;
+}
+
+.cards-grid::-webkit-scrollbar-thumb {
+  background: var(--color-silver-mist);
+  border-radius: 3px;
+}
+
+.cards-grid::-webkit-scrollbar-thumb:hover {
+  background: var(--color-graphite);
 }
 
 .vocab-item {
